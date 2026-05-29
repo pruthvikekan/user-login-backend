@@ -33,7 +33,11 @@ public class JwtUtils {
     }
 
     private Key key() {
-        return Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtSecret));
+        try {
+            return Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtSecret));
+        } catch (IllegalArgumentException e) {
+            return Keys.hmacShaKeyFor(jwtSecret.getBytes());
+        }
     }
 
     public String getUserNameFromJwtToken(String token) {

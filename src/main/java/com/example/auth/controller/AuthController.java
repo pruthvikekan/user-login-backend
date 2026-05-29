@@ -35,22 +35,33 @@ public class AuthController {
 
     @PostMapping("/signin")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword()));
 
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword()));
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+            String jwt = jwtUtils.generateJwtToken(authentication);
+            
+            UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
 
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        String jwt = jwtUtils.generateJwtToken(authentication);
-        
-        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-
-        return ResponseEntity.ok(new JwtResponse(jwt,
-                userDetails.getId(),
-                userDetails.getName(),
-                userDetails.getEmail(),
-                userDetails.getVillage(),
-                userDetails.getDistrict(),
-                userDetails.getPhoto()));
+            return ResponseEntity.ok(new JwtResponse(jwt,
+                    userDetails.getId(),
+                    userDetails.getName(),
+                    userDetails.getEmail(),
+                    userDetails.getVillage(),
+                    userDetails.getDistrict(),
+                    userDetails.getPhoto()));
+        } catch (org.springframework.security.authentication.BadCredentialsException e) {
+            return ResponseEntity
+                    .status(org.springframework.http.HttpStatus.UNAUTHORIZED)
+                    .body(new MessageResponse("Error: Invalid email or password"));
+        } catch (Exception e) {
+            System.err.println("LOGIN ERROR: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity
+                    .status(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new MessageResponse("Error: An unexpected error occurred during login."));
+        }
     }
 
     @PostMapping("/signup")
